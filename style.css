@@ -1,0 +1,31 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    background: rgb(214, 12, 46);
+}
+
+.canvas-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: rgb(194, 13, 43);
+}
+
+#canvas1 {
+    /* Remove width/height here - let JavaScript control actual size */
+    border: 5px solid rgb(25, 22, 78);
+    background: transparent;
+    display: block; /* Important for canvas sizing */
+    margin: 0 auto; /* Center the canvas */
+}
+
+#player {
+    display: none;
+}
