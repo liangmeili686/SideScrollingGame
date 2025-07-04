@@ -12,37 +12,73 @@ let gameSpeed = 4;
 
 let state = 'STANDING LEFT';
 
-const backgroundLayer1 = new Image();
-backgroundLayer1.src = 'assets/sky.png';
-const backgroundLayer2 = new Image();
-backgroundLayer2.src = 'assets/cloud.png';
-const backgroundLayer3 = new Image();
-backgroundLayer3.src = 'assets/mountain.png';
-const backgroundLayer4 = new Image();
-backgroundLayer4.src = 'assets/grassGround.png';
+// Asset loading system
+const assets = {
+    backgroundLayer1: new Image(),
+    backgroundLayer2: new Image(),
+    backgroundLayer3: new Image(),
+    backgroundLayer4: new Image(),
+    bulletImage: new Image(),
+    heartImage: new Image(),
+    lifeImage: new Image(),
+    gameOverImage: new Image(),
+    tryAgainImage: new Image(),
+    tryAgainHoverImage: new Image(),
+    attackerImages: [
+        new Image(), new Image(), new Image(), new Image()
+    ],
+    noticeImage: new Image(),
+    clickToStartImage: new Image()
+};
 
-// Preload game object images to avoid creating new Image objects in constructors
-const bulletImage = new Image();
-bulletImage.src = 'assets/bullet.png';
-const heartImage = new Image();
-heartImage.src = 'assets/heart.png';
-const lifeImage = new Image();
-lifeImage.src = 'assets/life.png';
-const gameOverImage = new Image();
-gameOverImage.src = 'assets/gameOver.png';
-const tryAgainImage = new Image();
-tryAgainImage.src = 'assets/tryAgain.png';
-const tryAgainHoverImage = new Image();
-tryAgainHoverImage.src = 'assets/tryAgainS.png';
-const attackerImages = [
-    new Image(), new Image(), new Image(), new Image()
-];
-attackerImages[0].src = 'assets/eye.png';
-attackerImages[1].src = 'assets/nose.png';
-attackerImages[2].src = 'assets/mouth.png';
-attackerImages[3].src = 'assets/wine.png';
+// Set image sources
+assets.backgroundLayer1.src = 'assets/sky.png';
+assets.backgroundLayer2.src = 'assets/cloud.png';
+assets.backgroundLayer3.src = 'assets/mountain.png';
+assets.backgroundLayer4.src = 'assets/grassGround.png';
+assets.bulletImage.src = 'assets/bullet.png';
+assets.heartImage.src = 'assets/heart.png';
+assets.lifeImage.src = 'assets/life.png';
+assets.gameOverImage.src = 'assets/gameOver.png';
+assets.tryAgainImage.src = 'assets/tryAgain.png';
+assets.tryAgainHoverImage.src = 'assets/tryAgainS.png';
+assets.attackerImages[0].src = 'assets/eye.png';
+assets.attackerImages[1].src = 'assets/nose.png';
+assets.attackerImages[2].src = 'assets/mouth.png';
+assets.attackerImages[3].src = 'assets/wine.png';
+assets.noticeImage.src = 'assets/notice.png';
+assets.clickToStartImage.src = 'assets/clickToStart.png';
 
-window.addEventListener('load', function(){
+const backgroundMusic = new Audio('assets/TurqouiseWater1000Handz.mp3');
+backgroundMusic.loop = true;
+backgroundMusic.volume = 0.5;
+
+// Asset loading promise
+const loadAssets = () => {
+    const imagePromises = Object.values(assets).flat().map(img => {
+        return new Promise((resolve, reject) => {
+            if (img.complete) {
+                resolve(img);
+            } else {
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Failed to load image: ${img.src}`));
+            }
+        });
+    });
+    
+    return Promise.all(imagePromises);
+};
+
+// Wait for all assets to load before starting the game
+loadAssets().then(() => {
+    console.log('All assets loaded successfully!');
+    startGame();
+}).catch(error => {
+    console.error('Failed to load assets:', error);
+});
+
+function startGame() {
+    window.addEventListener('load', function(){
 
     class Layer {
         constructor(image, speedModifier){
@@ -69,10 +105,10 @@ window.addEventListener('load', function(){
         }
     }
 
-    const layer1 = new Layer(backgroundLayer1, 0.2);
-    const layer2 = new Layer(backgroundLayer2, 0.4);
-    const layer3 = new Layer(backgroundLayer3, 0.6);
-    const layer4 = new Layer(backgroundLayer4, 1);
+    const layer1 = new Layer(assets.backgroundLayer1, 0.2);
+    const layer2 = new Layer(assets.backgroundLayer2, 0.4);
+    const layer3 = new Layer(assets.backgroundLayer3, 0.6);
+    const layer4 = new Layer(assets.backgroundLayer4, 1);
 
     const gameObjects = [layer1, layer2, layer3, layer4];
 
@@ -123,7 +159,27 @@ window.addEventListener('load', function(){
         }
     });
     
+    // Robust music start on any user interaction
+    let musicStarted = false;
+    const startMusicOnInteraction = () => {
+        if (!musicStarted && backgroundMusic.paused) {
+            backgroundMusic.play().then(() => {
+                musicStarted = true;
+            }).catch(() => {});
+        }
+    };
+    canvas.addEventListener('click', startMusicOnInteraction, { once: true });
+    canvas.addEventListener('keydown', startMusicOnInteraction, { once: true });
+    canvas.addEventListener('mousedown', startMusicOnInteraction, { once: true });
+    canvas.addEventListener('touchstart', startMusicOnInteraction, { once: true });
+
+    // Dismiss intro overlay and start game on first click if intro is showing
     canvas.addEventListener('click', (e) => {
+        if (game && game.showIntro && !game.introFading) {
+            game.introFading = true;
+            game.introFadeStart = performance.now();
+            return;
+        }
         // If game is over, check for try again button click
         if (game && game.gameOver) {
             const rect = canvas.getBoundingClientRect();
@@ -176,7 +232,7 @@ window.addEventListener('load', function(){
             this.dy = distance > 0 ? dy / distance : 0;
             this.angle = Math.atan2(dy, dx);
     
-            this.image = bulletImage;
+            this.image = assets.bulletImage;
         }
         update(){
             this.x += this.dx * this.speed;
@@ -227,8 +283,8 @@ window.addEventListener('load', function(){
             this.angleSpeed = 0.003;
             this.amplitude = 10 + Math.random() * 10;
     
-            const randomIndex = Math.floor(Math.random() * attackerImages.length);
-            this.image = attackerImages[randomIndex];
+            const randomIndex = Math.floor(Math.random() * assets.attackerImages.length);
+            this.image = assets.attackerImages[randomIndex];
         }
         
         update(){
@@ -290,7 +346,7 @@ window.addEventListener('load', function(){
             this.markedForDeletion = false;
             this.frameTimer = 0;
             this.frameInterval = 1000 / this.fps;
-            this.image = heartImage;
+            this.image = assets.heartImage;
             
             this.frameX = 0;
             this.maxFrame = 5;
@@ -369,6 +425,13 @@ window.addEventListener('load', function(){
             
             // Game over state
             this.gameOver = false;
+            
+            // Intro overlay state
+            this.showIntro = true;
+            this.introFade = 0; // 0 = fully visible, 1 = fully faded
+            this.introFading = false;
+            this.introFadeStart = 0;
+            
             this.gameOverAnimation = {
                 startTime: 0,
                 duration: 1500, // 1.5 seconds for drop animation
@@ -415,6 +478,25 @@ window.addEventListener('load', function(){
         update(currentTime){
             const deltaTime = currentTime - this.lastTime;
             this.lastTime = currentTime;
+
+            // Handle intro overlay
+            if (this.showIntro) {
+                if (this.introFading) {
+                    // Animate fade out
+                    const fadeElapsed = currentTime - this.introFadeStart;
+                    this.introFade = Math.min(1, fadeElapsed / 800);
+                    if (this.introFade >= 1) {
+                        this.showIntro = false;
+                        this.introFading = false;
+                        this.introFade = 0;
+                        // Start music after intro
+                        if (backgroundMusic.paused) {
+                            backgroundMusic.play().catch(() => {});
+                        }
+                    }
+                }
+                return; // Block game updates while intro is showing
+            }
             
             // Update timer
             if (this.gameStartTime === 0) {
@@ -531,28 +613,53 @@ window.addEventListener('load', function(){
             // Clear the entire canvas
             context.clearRect(0, 0, this.width, this.height);
             
-            // Draw background layers
+            // Always draw background layers first
             gameObjects.forEach(object => {
                 object.draw(context);
             });
             
-
+            // Draw intro overlay if needed (on top of background)
+            if (this.showIntro) {
+                this.drawIntroOverlay(context, currentTime);
+                return; // Don't draw the rest of the game while intro is showing
+            }
+            
+            // Draw game objects
             this.hearts.forEach(heart => heart.draw(context));
             this.bullets.forEach(object => object.draw(context));
             this.attackers.forEach(object => object.draw(context));
-
             // Draw player
             this.player.draw(context);
-            
             // Draw health display
             this.drawHealth(context, currentTime);
-            
             // Draw game over screen
             if (this.gameOver) {
                 this.drawGameOverScreen(context, currentTime);
             }
         }
         
+        drawIntroOverlay(context, currentTime) {
+            // Fade out effect
+            const alpha = 1 - this.introFade;
+            context.save();
+            context.globalAlpha = alpha;
+            // Draw notice.png centered
+            const noticeW = assets.noticeImage.width;
+            const noticeH = assets.noticeImage.height;
+            const noticeX = (this.width - noticeW) / 2;
+            const noticeY = (this.height - noticeH) / 2;
+            context.drawImage(assets.noticeImage, noticeX, noticeY);
+            // Draw clickToStart.png blinking at the bottom
+            const blink = Math.floor(currentTime / 400) % 2 === 0;
+            if (blink || this.introFading) {
+                const ctsW = assets.clickToStartImage.width;
+                const ctsH = assets.clickToStartImage.height;
+                const ctsX = (this.width - ctsW) / 2;
+                const ctsY = this.height - ctsH - 30;
+                context.drawImage(assets.clickToStartImage, ctsX, ctsY);
+            }
+            context.restore();
+        }
         drawHealth(context, currentTime) {
             const lifeSize = 40;
             const spacing = 45;
@@ -590,7 +697,7 @@ window.addEventListener('load', function(){
                     context.save();
                     context.globalAlpha = alpha;
                     context.drawImage(
-                        lifeImage,
+                        assets.lifeImage,
                         startX + i * spacing,
                         startY,
                         lifeSize,
@@ -602,7 +709,7 @@ window.addEventListener('load', function(){
                     context.save();
                     context.globalAlpha = 0.3;
                     context.drawImage(
-                        lifeImage,
+                        assets.lifeImage,
                         startX + i * spacing,
                         startY,
                         lifeSize,
@@ -728,7 +835,7 @@ window.addEventListener('load', function(){
             const gameOverWidth = 1000;
             const gameOverHeight = 252;
             context.drawImage(
-                gameOverImage,
+                assets.gameOverImage,
                 this.width / 2 - gameOverWidth / 2, // Center horizontally
                 anim.gameOverY, // Use animated Y position
                 gameOverWidth,
@@ -741,7 +848,7 @@ window.addEventListener('load', function(){
             const tryAgainHeight = 151;
             
             context.drawImage(
-                button.isHovered ? tryAgainHoverImage : tryAgainImage,
+                button.isHovered ? assets.tryAgainHoverImage : assets.tryAgainImage,
                 button.x, // Already centered horizontally
                 button.y, // Use animated Y position
                 tryAgainWidth,
@@ -760,4 +867,5 @@ window.addEventListener('load', function(){
     }
     
     animate(0);
-});
+    });
+}
